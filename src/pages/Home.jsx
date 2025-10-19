@@ -15,13 +15,17 @@ const Home = () => {
   useEffect(() => {
     const fetchRecipes = async () => {
       try {
-        const res = await fetch("https://www.themealdb.com/api/json/v1/1/search.php?s=");
+        const res = await fetch(
+          "https://www.themealdb.com/api/json/v1/1/search.php?s="
+        );
         const data = await res.json();
         if (data.meals) {
           const formatted = data.meals.map((meal) => ({
             id: meal.idMeal,
             name: meal.strMeal,
-            description: meal.strInstructions.slice(0, 100) + "...",
+            description: meal.strInstructions
+              ? meal.strInstructions.slice(0, 100) + "..."
+              : "No description available.",
             prepTime: "N/A",
             cookTime: "N/A",
             servings: "N/A",
@@ -38,22 +42,33 @@ const Home = () => {
         console.error("Error fetching recipes:", err);
       }
     };
-
     fetchRecipes();
   }, []);
 
-  // Filter logic
+  // Filter Logic
   const filteredRecipes = recipes
     .filter((recipe) => {
       if (!query) return true;
       return (
         recipe.name.toLowerCase().includes(query.toLowerCase()) ||
-        (recipe.description && recipe.description.toLowerCase().includes(query.toLowerCase()))
+        (recipe.description &&
+          recipe.description.toLowerCase().includes(query.toLowerCase()))
       );
     })
     .filter((recipe) => {
-      if (filters.cuisine.length && !filters.cuisine.includes(recipe.cuisine)) return false;
-      if (filters.diet.length && !filters.diet.includes(recipe.category)) return false;
+      if (filters.cuisine.length && !filters.cuisine.includes(recipe.cuisine))
+        return false;
+
+      if (filters.diet.length) {
+        const dietMap = {
+          Vegetarian: ["Vegetarian", "Side", "Dessert"],
+          Vegan: ["Vegan", "Vegetarian"],
+          "Gluten-free": ["Beef", "Chicken", "Seafood"], // example mapping
+        };
+        const matched = filters.diet.some((d) => dietMap[d]?.includes(recipe.category));
+        if (!matched) return false;
+      }
+
       return true;
     });
 
@@ -63,7 +78,9 @@ const Home = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-4xl font-bold text-center text-orange-500">Flavor Quest 🍽️</h1>
+      <h1 className="text-4xl font-bold text-center text-orange-500">
+        Flavor Quest 🍽️
+      </h1>
       <p className="text-center mt-2 text-gray-600">
         Search by dish name or ingredients (use commas for multiple ingredients)
       </p>
@@ -93,7 +110,9 @@ const Home = () => {
 
       {/* --- RANDOM RECIPES --- */}
       <div className="mt-10">
-        <h2 className="text-2xl font-bold mb-6 text-center">Are you feeling hungry? 🍴</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">
+          Are you feeling hungry? 🍴
+        </h2>
         <div className="grid gap-6 md:grid-cols-2">
           {randomRecipes.map((recipe) => (
             <RecipeCard
