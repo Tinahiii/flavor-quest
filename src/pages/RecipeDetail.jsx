@@ -1,79 +1,96 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { mockData } from "../utils/mockData";
 
 const RecipeDetail = () => {
   const { id } = useParams();
-  const recipe = mockData.find((r) => r.id === parseInt(id));
-
+  const [recipe, setRecipe] = useState(null);
   const [favorites, setFavorites] = useState([]);
 
-  // Load favorites from localStorage
   useEffect(() => {
+    const fetchRecipe = async () => {
+      const res = await fetch(
+        `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`
+      );
+      const data = await res.json();
+      const meal = data.meals[0];
+
+      setRecipe({
+        id: meal.idMeal,
+        name: meal.strMeal,
+        description: meal.strInstructions.slice(0, 100) + "...",
+        prepTime: "N/A",
+        cookTime: "N/A",
+        servings: "N/A",
+        ingredients: Array.from({ length: 20 }, (_, i) => {
+          const ingredient = meal[`strIngredient${i + 1}`];
+          const measure = meal[`strMeasure${i + 1}`];
+          return ingredient ? `${ingredient} - ${measure}` : null;
+        }).filter(Boolean),
+        instructions: meal.strInstructions.split(/\r?\n/).filter(Boolean),
+        category: meal.strCategory,
+        cuisine: meal.strArea,
+        image: meal.strMealThumb,
+        youtube: meal.strYoutube,
+        source: meal.strSource,
+      });
+    };
+
+    fetchRecipe();
+
     const storedFavorites = JSON.parse(localStorage.getItem("favorites")) || [];
     setFavorites(storedFavorites);
-  }, []);
+  }, [id]);
 
-  // Save favorites to localStorage
-  const updateFavorites = (updatedFavorites) => {
-    setFavorites(updatedFavorites);
-    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
-  };
-
-  // Toggle favorite
   const toggleFavorite = () => {
     const isFav = favorites.some((fav) => fav.id === recipe.id);
-    if (isFav) {
-      const updated = favorites.filter((fav) => fav.id !== recipe.id);
-      updateFavorites(updated);
-    } else {
-      updateFavorites([...favorites, recipe]);
-    }
+    const updated = isFav
+      ? favorites.filter((fav) => fav.id !== recipe.id)
+      : [...favorites, recipe];
+
+    setFavorites(updated);
+    localStorage.setItem("favorites", JSON.stringify(updated));
   };
+
+  if (!recipe)
+    return <p className="text-center mt-10 text-red-500">Loading...</p>;
 
   const isFavorite = favorites.some((fav) => fav.id === recipe.id);
 
-  if (!recipe)
-    return <p className="text-center mt-10 text-red-500">Recipe not found.</p>;
-
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      {/* --- IMAGE --- */}
+      {/* IMAGE */}
       <img
         src={recipe.image}
         alt={recipe.name}
         className="w-full h-64 object-cover rounded-md shadow-md"
       />
 
-      {/* --- HEADER + FAVORITE BUTTON --- */}
+      {/* HEADER + FAVORITE BUTTON */}
       <div className="flex justify-between items-center mt-4">
         <h1 className="text-3xl font-bold">{recipe.name}</h1>
         <button
           onClick={toggleFavorite}
           className={`px-4 py-2 rounded text-white ${
-            isFavorite
-              ? "bg-red-500 hover:bg-red-600"
-              : "bg-gray-400 hover:bg-gray-500"
+            isFavorite ? "bg-red-500 hover:bg-red-600" : "bg-gray-400 hover:bg-gray-500"
           }`}
         >
           {isFavorite ? "❤️ Remove" : "🤍 Favorite"}
         </button>
       </div>
 
-      {/* --- CATEGORY & CUISINE --- */}
+      {/* CATEGORY & CUISINE */}
       <p className="mt-2 text-gray-700 italic">
-        <strong>Category:</strong> {recipe.category || "N/A"} |{" "}
-        <strong>Cuisine:</strong> {recipe.cuisine || "N/A"}
+        <strong>Category:</strong> {recipe.category} | <strong>Cuisine:</strong> {recipe.cuisine}
       </p>
 
-      {/* --- DESCRIPTION --- */}
+      {/* DESCRIPTION */}
       <p className="mt-3 text-gray-600">{recipe.description}</p>
       <p className="text-gray-500 mt-1">
         ⏱ {recipe.prepTime} prep | 🍳 {recipe.cookTime} cook
       </p>
       <p className="mt-2 font-semibold">Servings: {recipe.servings}</p>
 
-      {/* --- INGREDIENTS --- */}
+      {/* INGREDIENTS */}
       <h2 className="mt-6 text-xl font-semibold border-b pb-2">Ingredients:</h2>
       <ul className="list-disc list-inside mt-2 space-y-1">
         {recipe.ingredients.map((ing, index) => (
@@ -81,7 +98,7 @@ const RecipeDetail = () => {
         ))}
       </ul>
 
-      {/* --- INSTRUCTIONS --- */}
+      {/* INSTRUCTIONS */}
       <h2 className="mt-6 text-xl font-semibold border-b pb-2">Instructions:</h2>
       <ol className="list-decimal list-inside mt-2 space-y-1">
         {recipe.instructions.map((step, index) => (
@@ -89,7 +106,7 @@ const RecipeDetail = () => {
         ))}
       </ol>
 
-      {/* --- YOUTUBE VIDEO --- */}
+      {/* YOUTUBE VIDEO */}
       {recipe.youtube && (
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-2">Watch Tutorial 🎥</h2>
@@ -102,7 +119,7 @@ const RecipeDetail = () => {
         </div>
       )}
 
-      {/* --- SOURCE LINK --- */}
+      {/* SOURCE LINK */}
       {recipe.source && (
         <div className="mt-6">
           <a
